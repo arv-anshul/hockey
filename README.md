@@ -35,3 +35,9 @@ uv run python -m src.altiusrt.main 180
 I have scraped data related to **HIL 2025** and uploaded
 [on Kaggle](https://www.kaggle.com/datasets/arvanshul/hockey-india-league-2025), you can use that to create an awesome
 dashboard out of it.
+
+## Acknowledgment
+
+- Took help from
+  [@Martijn-van-Kekem-Development/hockey-match-calendar](https://github.com/Martijn-van-Kekem-Development/hockey-match-calendar)
+  repo for scraping codes like CSS selector, URL formation and more.
