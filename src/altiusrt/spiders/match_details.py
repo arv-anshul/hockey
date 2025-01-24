@@ -5,7 +5,6 @@ import typing
 
 import scrapy
 from pydantic import BaseModel, ValidationError
-from scrapy import Request
 
 if typing.TYPE_CHECKING:
     from scrapy.http.response import Response
@@ -64,21 +63,41 @@ class MatchesDetailsSpider(scrapy.Spider):
 
     def __init__(
         self,
-        match_ids: list[int],
+        competition_id: int,
         domain: str | None = None,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.domain = domain or "hockeyindia.altiusrt.com"
-        self.match_ids = match_ids
+        self.competition_id = competition_id
 
     def start_requests(self):
-        for match_id in self.match_ids:
-            url = f"https://{self.domain}/rt/matches/{match_id}?embeds=statistics,goals"
-            yield Request(url, self.parse)
+        url = f"https://{self.domain}/competitions/{self.competition_id}/matches"
+        yield scrapy.Request(url, self.parse_match_ids)
 
-    def parse(self, response: Response):
+    def parse_match_ids(self, response: Response):
+        rows = response.css(".tab-content table tbody tr")
+
+        match_ids = []
+        for row in rows:
+            link = row.css("td:nth-child(3) a::attr(href)").get()
+            if not link:
+                raise ValueError(
+                    f"Error while parsing match_id for competition {self.competition_id}",
+                )
+
+            # whether the match is completed if not then it's an upcoming match
+            scoreline = row.css("td:nth-child(4)::text").get("-").strip()
+            if scoreline != "-":
+                match_ids.append(link.split("/")[-1])
+
+        # iterate over match_ids and fetch match details
+        for match_id in match_ids:
+            url = f"https://{self.domain}/rt/matches/{match_id}?embeds=statistics,goals"
+            yield scrapy.Request(url, self.parse_match_details)
+
+    def parse_match_details(self, response: Response):
         try:
             match = MatchDetailsModel(url=response.url, **json.loads(response.text))
             yield match.model_dump()

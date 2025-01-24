@@ -94,19 +94,12 @@ def scrape_players(process: CrawlerProcess, competition_id: int):
 def scrape_matches_details(process: CrawlerProcess, competition_id: int):
     path = DATA_DIR / f"competition_{competition_id}/matches_details.jsonl"
 
-    # load matches.json for match_ids
-    matches_path = DATA_DIR / f"competition_{competition_id}/matches.json"
-    if not matches_path.exists():
-        print(f"{matches_path} does not exist")
-        return
-    matches = json.loads(matches_path.read_bytes())
-
     process.crawl(
         _set_spider_settings(
             MatchesDetailsSpider,
             {"FEEDS": {path: {"format": "jsonl", "overwrite": True}}},
         ),
-        match_ids=[i["id"] for i in matches if i["scoreline"]],
+        competition_id=competition_id,
     )
 
 
