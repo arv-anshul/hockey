@@ -1,4 +1,3 @@
-import json
 import sys
 from pathlib import Path
 
@@ -71,24 +70,17 @@ def scrape_competition_matches(process: CrawlerProcess, competition_id: int):
 
 def scrape_players(process: CrawlerProcess, competition_id: int):
     path = DATA_DIR / f"competition_{competition_id}/players.jsonl"
+    # Skip if already exists because players are not updated often
     if path.exists():
         return
 
-    # load teams.json for team_ids
-    teams_path = DATA_DIR / f"competition_{competition_id}/teams.json"
-    if not teams_path.exists():
-        print(f"{teams_path} does not exist")
-        return
-    teams = json.loads(teams_path.read_bytes())
-
-    for team in teams:
-        process.crawl(
-            _set_spider_settings(
-                PlayersSpider,
-                {"FEEDS": {path: {"format": "jsonl"}}},
-            ),
-            team_id=team["id"],
-        )
+    process.crawl(
+        _set_spider_settings(
+            PlayersSpider,
+            {"FEEDS": {path: {"format": "jsonl", "overwrite": False}}},
+        ),
+        competition_id=competition_id,
+    )
 
 
 def scrape_matches_details(process: CrawlerProcess, competition_id: int):
@@ -109,8 +101,8 @@ def main(competition_id: int):
     scrape_competitions(process)
     scrape_competition_teams(process, competition_id)
     scrape_competition_matches(process, competition_id)
-    scrape_matches_details(process, competition_id)
     scrape_players(process, competition_id)
+    scrape_matches_details(process, competition_id)
 
     process.start()
 

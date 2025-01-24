@@ -22,22 +22,39 @@ class PlayersSpider(scrapy.Spider):
 
     def __init__(
         self,
-        team_id: int,
+        competition_id: int,
         domain: str | None = None,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.domain = domain or "hockeyindia.altiusrt.com"
-        self.team_id = team_id
+        self.competition_id = competition_id
 
     def start_requests(self):
-        yield scrapy.Request(
-            f"https://{self.domain}/teams/{self.team_id}#players",
-            self.parse,
-        )
+        url = f"https://{self.domain}/competitions/{self.competition_id}/teams"
+        yield scrapy.Request(url, self.parse_team_ids)
 
-    def parse(self, response: Response):
+    def parse_team_ids(self, response: Response):
+        rows = response.css(".tab-content table tbody tr")
+
+        team_ids = []
+        for row in rows:
+            team_id = row.css("td:nth-child(1) ::attr(href)").get()
+            if not team_id:
+                msg = f"Error while parsing team_id for player {self.competition_id}"
+                raise ValueError(msg)
+            team_ids.append(team_id.strip().rsplit("/", 1)[-1])
+
+        # iterate over team_ids and fetch player details
+        for team_id in team_ids:
+            yield scrapy.Request(
+                f"https://{self.domain}/teams/{team_id}#players",
+                self.parse_players,
+                cb_kwargs={"team_id": int(team_id)},
+            )
+
+    def parse_players(self, response: Response, team_id: int):
         rows = response.css("#players table tr")[1:-1]  # remove thead > tr and last tr
 
         if len(rows) == 0 or (
@@ -49,7 +66,10 @@ class PlayersSpider(scrapy.Spider):
             self.logger.critical("No results found. Stopping scraper.")
             return
 
-        yield from (PlayerModel(**self.parse_player(row)).model_dump() for row in rows)
+        yield from (
+            PlayerModel(team_id=team_id, **self.parse_player(row)).model_dump()
+            for row in rows
+        )
 
     def parse_player(self, row: Selector) -> dict[str, typing.Any]:
         player_id = (
@@ -60,7 +80,6 @@ class PlayersSpider(scrapy.Spider):
         )
         return {
             "id": player_id,
-            "team_id": self.team_id,
             "name": row.css("td:nth-child(2) a::text").get("N/A").strip(),
             "shirt": row.css("td:nth-child(1) ::text").get("-1").strip(),
         }
