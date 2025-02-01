@@ -27,6 +27,7 @@ def _set_spider_settings(spider: type[scrapy.Spider], settings: dict):
 
 
 def scrape_competitions(process: CrawlerProcess):
+    """Scrape all the competitions available on the given altiusrt domain."""
     path = DATA_DIR / "competitions.json"
     if path.exists():
         return
@@ -41,6 +42,7 @@ def scrape_competitions(process: CrawlerProcess):
 
 
 def scrape_competition_teams(process: CrawlerProcess, competition_id: int):
+    """Scrape all the teams participating in given `competition_id`."""
     path = DATA_DIR / f"competition_{competition_id}/teams.json"
     if path.exists():
         return
@@ -55,6 +57,7 @@ def scrape_competition_teams(process: CrawlerProcess, competition_id: int):
 
 
 def scrape_competition_matches(process: CrawlerProcess, competition_id: int):
+    """Scrapes matches basic details which will be played in given `competition_id`."""
     path = DATA_DIR / f"competition_{competition_id}/matches.json"
     if path.exists():
         return
@@ -69,6 +72,7 @@ def scrape_competition_matches(process: CrawlerProcess, competition_id: int):
 
 
 def scrape_players(process: CrawlerProcess, competition_id: int):
+    """Scrapes all the players details participating in given `competition_id`."""
     path = DATA_DIR / f"competition_{competition_id}/players.jsonl"
     # Skip if already exists because players are not updated often
     if path.exists():
@@ -84,6 +88,7 @@ def scrape_players(process: CrawlerProcess, competition_id: int):
 
 
 def scrape_matches_details(process: CrawlerProcess, competition_id: int):
+    """Scrapes full details of matches which will be played in given `competition_id`."""
     path = DATA_DIR / f"competition_{competition_id}/matches_details.jsonl"
 
     process.crawl(
@@ -98,6 +103,7 @@ def scrape_matches_details(process: CrawlerProcess, competition_id: int):
 def main(competition_id: int):
     process = CrawlerProcess(settings=DEFAULT_SETTINGS)
 
+    # Scraped data stores in `data/` dir in structured way
     scrape_competitions(process)
     scrape_competition_teams(process, competition_id)
     scrape_competition_matches(process, competition_id)
